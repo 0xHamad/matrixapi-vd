@@ -1,37 +1,43 @@
 # -*- coding: utf-8 -*-
 """
-Telegram Bot → Supabase Announcements Saver
-============================================
-This bot polls the private Telegram channel and saves every new
-SMS message to Supabase so the web dashboard can display them.
+Matrix Userbot — Private Channel Monitor → Supabase
+=====================================================
+Uses YOUR OWN Telegram account (Telethon userbot).
+No need to be admin. Just a member of the channel.
 
 Setup:
-  pip install python-telegram-bot requests supabase
-  
-Set env vars (or edit directly below):
-  SUPABASE_URL    = your supabase project URL
-  SUPABASE_KEY    = your supabase service role key
-  TG_BOT_TOKEN    = your Telegram bot token
-  TG_CHANNEL_ID   = the private channel ID (e.g. -1003721669079)
+  pip install telethon requests
+
+Get API credentials from: https://my.telegram.org
+  → Log in → API Development Tools → Create App
+  → Copy api_id and api_hash
+
+First run: It will ask for your phone number + OTP code.
+After that it saves a session file and runs silently.
 """
 
 import os
-import time
+import asyncio
 import logging
 import requests
-import random
 from datetime import datetime
+from telethon import TelegramClient, events
+from telethon.tl.types import PeerChannel
 
 # ===================== CONFIG =====================
-TG_BOT_TOKEN  = "8899866025:AAFS0Dw1DBjb7PzjJqdnM8El9mAma4jTQ98"
-TG_CHANNEL_ID = "-1003721669079"   # private channel
-TG_USER_ID    = "5360297263"       # your personal TG ID (for error alerts)
+# Get from https://my.telegram.org → API Development Tools
+API_ID   = 12345678           # ← Replace with your api_id (integer)
+API_HASH = "your_api_hash_here"   # ← Replace with your api_hash
 
-SUPABASE_URL  = os.environ.get("SUPABASE_URL", "https://YOUR_PROJECT.supabase.co")
-SUPABASE_KEY  = os.environ.get("SUPABASE_KEY", "YOUR_SERVICE_ROLE_KEY")
+# The private channel to monitor (the one you're a member of)
+CHANNEL_ID = -1003721669079   # works even for private channels you joined
 
-WEB_API_URL   = os.environ.get("WEB_URL", "https://matrix.hassanai.xyz")  # your web domain
-POLL_SLEEP    = 2   # seconds between Telegram polls
+# Supabase
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://YOUR_PROJECT.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "YOUR_SERVICE_ROLE_KEY")
+
+# Session file name (saved locally after first login)
+SESSION_NAME = "matrix_userbot"
 
 # ===================== LOGGING =====================
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -61,11 +67,11 @@ PREFIX_MAP = {
 }
 
 def get_country(number: str) -> str:
-    clean = str(number).lstrip("+")
+    clean = str(number).lstrip("+").replace(" ","")
     for pfx in sorted(PREFIX_MAP.keys(), key=len, reverse=True):
         if clean.startswith(pfx):
             return PREFIX_MAP[pfx]
-    return f"Unknown (+{clean[:3]})"
+    return f"Unknown (+{clean[:3]})" if len(clean) >= 3 else "Unknown"
 
 # ===================== SUPABASE =====================
 def supabase_insert(row: dict) -> bool:
@@ -78,25 +84,21 @@ def supabase_insert(row: dict) -> bool:
     }
     try:
         r = requests.post(url, json=row, headers=headers, timeout=10)
-        return r.status_code in (200, 201)
+        return r.status_code in (200, 201, 204)
     except Exception as e:
-        log.error(f"Supabase insert error: {e}")
+        log.error(f"Supabase error: {e}")
         return False
 
-# ===================== TELEGRAM =====================
-def tg_get(method: str, params: dict = {}) -> dict:
-    url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/{method}"
-    try:
-        r = requests.get(url, params=params, timeout=15)
-        return r.json()
-    except Exception as e:
-        log.error(f"Telegram API error ({method}): {e}")
-        return {"ok": False}
-
-def parse_sms_message(text: str) -> dict:
+# ===================== MESSAGE PARSER =====================
+def parse_message(text: str) -> dict:
     """
-    Parse the formatted SMS message from the Telegram channel.
-    Handles both Lamix and Purple panel formats.
+    Parse the formatted SMS text from the channel.
+    Handles formats like:
+    💠 LAMIX PANEL
+    CLI: HiPeople
+    Country: Malaysia
+    Number: 60123456789
+    Message: Your OTP is 1234
     """
     lines = text.strip().split("\n")
     result = {
@@ -106,128 +108,102 @@ def parse_sms_message(text: str) -> dict:
         "number": "",
         "content": "",
         "is_new_cli": False,
-        "raw_text": text,
+        "raw_text": text[:2000],
     }
 
+    content_next = False
+    content_lines = []
+
     for line in lines:
-        line = line.strip()
+        s = line.strip()
+        if not s:
+            continue
+
         # Detect panel
-        if "PURPLE" in line.upper() or "🪻" in line:
+        upper = s.upper()
+        if "PURPLE" in upper or "🪻" in s:
             result["platform"] = "purple"
-        elif "LAMIX" in line.upper() or "💠" in line:
+        elif "LAMIX" in upper or "💠" in s:
             result["platform"] = "lamix"
 
-        # Extract fields
-        if "CLI" in line and ":" in line:
-            result["cli"] = line.split(":", 1)[-1].strip().strip("`")
-        elif "Country" in line and ":" in line:
-            result["country"] = line.split(":", 1)[-1].strip()
-        elif "Number" in line and ":" in line:
-            num = line.split(":", 1)[-1].strip().strip("`")
-            result["number"] = num
-            if not result["country"]:
-                result["country"] = get_country(num)
-        elif "Message" in line and ":" in line:
-            pass  # next line will be message
-        elif "NEW CLI" in line.upper():
+        # New CLI detection
+        if "NEW CLI" in upper:
             result["is_new_cli"] = True
 
-    # Try to extract message content (usually after Message: line)
-    try:
-        msg_idx = next(i for i, l in enumerate(lines) if "Message" in l and ":" in l)
-        content_lines = lines[msg_idx + 1:]
-        result["content"] = " ".join(l.strip().strip('"').strip("`") for l in content_lines if l.strip() and "━" not in l).strip()
-    except StopIteration:
-        # Fallback: just use the raw text
+        # Extract fields
+        if content_next:
+            content_lines.append(s.strip("`\"'"))
+            continue
+
+        if ":" in s:
+            key, _, val = s.partition(":")
+            key_clean = key.strip().lower().replace("📡","").replace("🏢","").replace("🌍","").replace("📱","").strip()
+            val_clean = val.strip().strip("`\"' ")
+
+            if "cli" in key_clean and val_clean:
+                result["cli"] = val_clean
+            elif "country" in key_clean and val_clean:
+                result["country"] = val_clean
+            elif "number" in key_clean and val_clean:
+                result["number"] = val_clean
+                if not result["country"]:
+                    result["country"] = get_country(val_clean)
+            elif "message" in key_clean or "msg" in key_clean:
+                if val_clean:
+                    content_lines.append(val_clean)
+                content_next = True
+
+    result["content"] = " ".join(content_lines).strip()[:500]
+
+    # Fallback: if no structured data, try to use raw text as content
+    if not result["cli"] and not result["content"]:
         result["content"] = text[:500]
 
-    # Auto-detect country from number if still empty
+    # Fix country from number if still empty
     if not result["country"] and result["number"]:
         result["country"] = get_country(result["number"])
 
     return result
 
-# ===================== MAIN LOOP =====================
-seen_msg_ids: set = set()
-last_update_id = 0
+# ===================== MAIN USERBOT =====================
+async def main():
+    log.info("🚀 Matrix Userbot starting...")
+    log.info(f"📡 Monitoring channel: {CHANNEL_ID}")
 
-def main():
-    global last_update_id
+    client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
+    await client.start()  # Will prompt phone + OTP on first run
 
-    log.info(f"🤖 Matrix Telegram→Supabase Bot started")
-    log.info(f"📡 Monitoring channel: {TG_CHANNEL_ID}")
-    log.info(f"💾 Saving to: {SUPABASE_URL}")
+    me = await client.get_me()
+    log.info(f"✅ Logged in as: {me.first_name} (@{me.username})")
 
-    # Verify bot works
-    me = tg_get("getMe")
-    if me.get("ok"):
-        log.info(f"✅ Bot connected: @{me['result']['username']}")
-    else:
-        log.error("❌ Bot connection failed! Check TG_BOT_TOKEN")
+    # Verify we can access the channel
+    try:
+        channel = await client.get_entity(PeerChannel(abs(CHANNEL_ID)))
+        log.info(f"✅ Channel found: {getattr(channel, 'title', CHANNEL_ID)}")
+    except Exception as e:
+        log.error(f"❌ Cannot access channel {CHANNEL_ID}: {e}")
+        log.error("Make sure you are a MEMBER of that channel!")
         return
 
-    # Get current offset to only process NEW messages
-    updates = tg_get("getUpdates", {"limit": 1, "offset": -1})
-    if updates.get("ok") and updates.get("result"):
-        last_update_id = updates["result"][-1]["update_id"] + 1
-        log.info(f"📌 Starting from update_id: {last_update_id}")
+    # Listen for new messages in the channel
+    @client.on(events.NewMessage(chats=CHANNEL_ID))
+    async def handler(event):
+        text = event.message.text or event.message.message or ""
+        if not text or len(text) < 5:
+            return
 
-    while True:
-        try:
-            updates = tg_get("getUpdates", {
-                "offset": last_update_id,
-                "limit": 100,
-                "timeout": 30,
-                "allowed_updates": ["channel_post", "message"],
-            })
+        log.info(f"📨 New message (id:{event.message.id}): {text[:80]}...")
 
-            if not updates.get("ok"):
-                time.sleep(POLL_SLEEP)
-                continue
+        parsed = parse_message(text)
+        ok = supabase_insert(parsed)
 
-            results = updates.get("result", [])
-            for update in results:
-                last_update_id = update["update_id"] + 1
+        if ok:
+            log.info(f"✅ Saved → CLI: {parsed['cli']} | {parsed['platform']} | {parsed['country']}")
+        else:
+            log.error(f"❌ Supabase save failed")
 
-                # Get message from channel_post or message
-                msg = update.get("channel_post") or update.get("message")
-                if not msg:
-                    continue
-
-                # Only process messages from our target channel
-                chat_id = str(msg.get("chat", {}).get("id", ""))
-                if chat_id != TG_CHANNEL_ID:
-                    continue
-
-                msg_id = msg.get("message_id")
-                if msg_id in seen_msg_ids:
-                    continue
-                seen_msg_ids.add(msg_id)
-
-                text = msg.get("text", "") or msg.get("caption", "")
-                if not text or len(text) < 10:
-                    continue
-
-                log.info(f"📨 New message from channel (id: {msg_id}): {text[:80]}...")
-
-                # Parse the message
-                parsed = parse_sms_message(text)
-
-                # Save to Supabase
-                ok = supabase_insert(parsed)
-                if ok:
-                    log.info(f"✅ Saved to Supabase — CLI: {parsed['cli']} | {parsed['platform']} | {parsed['country']}")
-                else:
-                    log.error(f"❌ Failed to save message to Supabase")
-
-            time.sleep(POLL_SLEEP)
-
-        except KeyboardInterrupt:
-            log.info("👋 Bot stopped.")
-            break
-        except Exception as e:
-            log.error(f"Loop error: {e}")
-            time.sleep(5)
+    log.info("👂 Listening for new messages... (Ctrl+C to stop)")
+    await client.run_until_disconnected()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
