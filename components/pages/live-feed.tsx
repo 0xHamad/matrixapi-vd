@@ -34,13 +34,15 @@ export function LiveFeed() {
   const [panel, setPanel] = useState<PanelFilter>("all")
   const [now] = useState(Date.now())
 
-  const todayStart = new Date().setHours(0, 0, 0, 0)
+  // 00:00 UTC is exactly 05:00 AM PKT. This resets the "Today" counts at 5 AM Pakistan Time.
+  const todayStart = new Date().setUTCHours(0, 0, 0, 0)
   const todayFeed = useMemo(() => feed.filter(s => s.receivedAt >= todayStart), [feed, todayStart])
   
   const lamixCount = useMemo(() => todayFeed.filter((s) => s.panel === "lamix").length, [todayFeed])
   const purpleCount = todayFeed.length - lamixCount
-  const active = useMemo(() => activeCliCount(feed), [feed])
-  const rows = useMemo(() => byPanel(feed, panel), [feed, panel])
+  const active = useMemo(() => activeCliCount(todayFeed), [todayFeed])
+  // Slice to 50 for the visual table/cards so it doesn't freeze the DOM
+  const rows = useMemo(() => byPanel(feed, panel).slice(0, 50), [feed, panel])
 
   return (
     <div className="space-y-6">
@@ -67,7 +69,7 @@ export function LiveFeed() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PanelSelector value={panel} onChange={setPanel} />
-        <span className="tabular text-sm text-app-muted">{rows.length} messages - updates live</span>
+        <span className="tabular text-sm text-app-muted">Showing latest {rows.length} of {todayFeed.length} today - updates live</span>
       </div>
 
       {!ready ? (

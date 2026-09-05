@@ -28,38 +28,55 @@ function useClock() {
 }
 
 function NotificationToggle() {
-  const [perm, setPerm] = useState<NotificationPermission>("default")
+  const [perm, setPerm] = useState<NotificationPermission | "unsupported">("default")
 
   useEffect(() => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      setPerm(Notification.permission)
+    if (typeof window !== "undefined") {
+      if (!("Notification" in window)) {
+        setPerm("unsupported")
+      } else {
+        setPerm(Notification.permission)
+      }
     }
   }, [])
 
   const requestPerm = async () => {
+    if (perm === "unsupported") {
+      alert("Browser notifications require HTTPS. You are on HTTP, so this feature is disabled by the browser.")
+      return
+    }
     if (typeof window !== "undefined" && "Notification" in window) {
       const p = await Notification.requestPermission()
       setPerm(p)
       if (p === "granted") {
         new Notification("Notifications Enabled", { body: "You will now receive alerts for new incoming SMS." })
+      } else if (p === "denied") {
+        alert("You blocked notifications. Please allow them in your browser site settings.")
       }
     }
   }
 
-  if (perm === "denied") return null
+  const isGranted = perm === "granted"
+  const isError = perm === "denied" || perm === "unsupported"
 
   return (
     <button
       onClick={requestPerm}
       className={`flex items-center gap-1.5 sm:gap-2 rounded-lg px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-semibold transition-colors border ${
-        perm === "granted" 
+        isGranted
           ? "bg-teal-500/10 text-teal-400 border-teal-500/20 hover:bg-teal-500/20"
-          : "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
+          : isError
+            ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
+            : "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
       }`}
     >
-      {perm === "granted" ? <BellRing className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <BellOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
-      <span className="hidden sm:inline">{perm === "granted" ? "Alerts On" : "Enable Alerts"}</span>
-      <span className="sm:hidden">{perm === "granted" ? "Alerts" : "Alerts"}</span>
+      {isGranted ? <BellRing className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <BellOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+      <span className="hidden sm:inline">
+        {isGranted ? "Alerts On" : isError ? "Alerts Blocked" : "Enable Alerts"}
+      </span>
+      <span className="sm:hidden">
+        {isGranted ? "Alerts" : isError ? "Blocked" : "Alerts"}
+      </span>
     </button>
   )
 }

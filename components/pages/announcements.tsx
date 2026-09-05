@@ -10,22 +10,32 @@ export function Announcements() {
   const [data, setData] = useState<AnnouncementRow[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState("")
-  const [notifPerm, setNotifPerm] = useState<NotificationPermission>("default")
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">("default")
   const seenIds = useRef<Set<string>>(new Set())
 
   // Load notification permission state
   useEffect(() => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      setNotifPerm(Notification.permission)
+    if (typeof window !== "undefined") {
+      if (!("Notification" in window)) {
+        setNotifPerm("unsupported")
+      } else {
+        setNotifPerm(Notification.permission)
+      }
     }
   }, [])
 
   const enableNotifications = async () => {
+    if (notifPerm === "unsupported") {
+      alert("Browser notifications require HTTPS. You are on HTTP, so this feature is disabled by the browser.")
+      return
+    }
     if (typeof window !== "undefined" && "Notification" in window) {
       const p = await Notification.requestPermission()
       setNotifPerm(p)
       if (p === "granted") {
         new Notification("Alerts Enabled!", { body: "You will get notified when new Telegram SMS arrive." })
+      } else if (p === "denied") {
+        alert("You blocked notifications. Please allow them in your browser site settings.")
       }
     }
   }
@@ -84,19 +94,25 @@ export function Announcements() {
             </span>
           }
         />
-        {notifPerm !== "denied" && (
-          <button
-            onClick={enableNotifications}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold border transition-all hover:-translate-y-0.5 ${
-              notifPerm === "granted"
-                ? "bg-teal-500/10 text-teal-400 border-teal-500/20 hover:bg-teal-500/20"
-                : "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
-            }`}
-          >
-            {notifPerm === "granted" ? <BellRing className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
-            {notifPerm === "granted" ? "Alerts Enabled" : "Enable Alerts"}
-          </button>
-        )}
+        {(() => {
+          const isGranted = notifPerm === "granted"
+          const isError = notifPerm === "denied" || notifPerm === "unsupported"
+          return (
+            <button
+              onClick={enableNotifications}
+              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold border transition-all hover:-translate-y-0.5 ${
+                isGranted
+                  ? "bg-teal-500/10 text-teal-400 border-teal-500/20 hover:bg-teal-500/20"
+                  : isError
+                    ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
+                    : "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
+              }`}
+            >
+              {isGranted ? <BellRing className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+              {isGranted ? "Alerts Enabled" : isError ? "Alerts Blocked" : "Enable Alerts"}
+            </button>
+          )
+        })()}
       </div>
 
       <div
