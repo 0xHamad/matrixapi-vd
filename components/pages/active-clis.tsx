@@ -17,7 +17,7 @@ const TABS = [
 ] as const
 
 export function ActiveClis() {
-  const { feed } = useFeed()
+  const { feed, rollingStats } = useFeed()
   const [hours, setHours] = useState<number>(1)
   const [copied, setCopied] = useState(false)
   const [, forceTick] = useState(0)
@@ -28,9 +28,15 @@ export function ActiveClis() {
     return () => clearInterval(t)
   }, [])
 
-  const scoped = useMemo(() => withinMs(feed, hours * 3_600_000), [feed, hours])
-  const stats = useMemo(() => cliStats(scoped), [scoped])
-  const totalSms = scoped.length
+  // Use real rolling stats from API
+  const stats = useMemo(() => {
+    const raw = hours === 1 ? rollingStats.hourly : hours === 4 ? rollingStats.fourHourly : rollingStats.daily
+    return (raw || []).map(r => ({
+      cli: r.cli, panel: r.panel as any, country: r.range || "", flag: "🌍",
+      count: r.count, payout: 0, lastMessage: r.content, lastAt: Date.now(), hourly: [],
+    }))
+  }, [rollingStats, hours])
+  const totalSms = stats.reduce((s, c) => s + c.count, 0)
   const max = stats[0]?.count ?? 1
   const avg = stats.length ? totalSms / stats.length : 0
   const cliList = stats.map((stat, index) => `${index + 1}. ${stat.cli}`).join("\n")
