@@ -166,11 +166,20 @@ def parse_message(text: str) -> dict:
     return result
 
 # ===================== MAIN USERBOT =====================
+PROXY = {
+    'proxy_type': 'http',
+    'addr': 'geo.floppydata.com',
+    'port': 10080,
+    'username': 'brJq0DlYdXOnayct',
+    'password': '4ItJqAadiH8JymOy'
+}
+
 async def main():
-    log.info("🚀 Matrix Userbot starting...")
+    log.info("🚀 Matrix Userbot starting with Mobile Proxy...")
     log.info(f"📡 Monitoring channel: {CHANNEL_ID}")
 
-    client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
+    # Using proxy to bypass Telegram VPS login blocks
+    client = TelegramClient(SESSION_NAME, API_ID, API_HASH, proxy=PROXY)
     await client.start()  # Will prompt phone + OTP on first run
 
     me = await client.get_me()
