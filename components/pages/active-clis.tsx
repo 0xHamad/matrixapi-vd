@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
-import { BarChart3, Radio, MessageSquare, Trophy, Sigma } from "lucide-react"
+import { BarChart3, Radio, MessageSquare, Trophy, Sigma, ClipboardList, Check } from "lucide-react"
 import { useFeed } from "@/components/feed-provider"
 import { PageHeader } from "@/components/page-header"
 import { AnimatedNumber, StatCard, PanelBadge, EmptyState } from "@/components/shared"
 import { cliStats, withinMs } from "@/lib/stats"
 import type { CliStat } from "@/lib/types"
+import { copyText } from "@/lib/format"
 
 const TABS = [
   { key: 1, label: "Last 1 Hour" },
@@ -18,6 +19,7 @@ const TABS = [
 export function ActiveClis() {
   const { feed } = useFeed()
   const [hours, setHours] = useState<number>(1)
+  const [copied, setCopied] = useState(false)
   const [, forceTick] = useState(0)
 
   // Auto-refresh every 3s
@@ -31,6 +33,16 @@ export function ActiveClis() {
   const totalSms = scoped.length
   const max = stats[0]?.count ?? 1
   const avg = stats.length ? totalSms / stats.length : 0
+  const cliList = stats.map((stat, index) => `${index + 1}. ${stat.cli}`).join("\n")
+
+  async function handleCopyClis() {
+    if (!cliList) return
+    const didCopy = await copyText(cliList)
+    if (didCopy) {
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1600)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -40,27 +52,41 @@ export function ActiveClis() {
         subtitle="Live leaderboard ranked by SMS volume · auto-refreshes every 3s"
       />
 
-      <div className="inline-flex flex-wrap items-center gap-1 rounded-full p-1" style={{ background: "var(--app-card)", border: "1px solid var(--app-border)" }}>
-        {TABS.map((t) => {
-          const active = hours === t.key
-          return (
-            <button
-              key={t.key}
-              onClick={() => setHours(t.key)}
-              className={`relative rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${active ? "text-black" : "text-app-muted hover:text-app-strong"}`}
-            >
-              {active && (
-                <motion.span
-                  layoutId="cli-tab"
-                  transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                  className="absolute inset-0 rounded-full"
-                  style={{ background: "var(--app-accent)", boxShadow: "var(--app-glow)" }}
-                />
-              )}
-              <span className="relative z-10">{t.label}</span>
-            </button>
-          )
-        })}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="inline-flex flex-wrap items-center gap-1 rounded-full p-1" style={{ background: "var(--app-card)", border: "1px solid var(--app-border)" }}>
+          {TABS.map((t) => {
+            const active = hours === t.key
+            return (
+              <button
+                key={t.key}
+                onClick={() => setHours(t.key)}
+                className={`relative rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${active ? "text-black" : "text-app-muted hover:text-app-strong"}`}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="cli-tab"
+                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                    className="absolute inset-0 rounded-full"
+                    style={{ background: "var(--app-accent)", boxShadow: "var(--app-glow)" }}
+                  />
+                )}
+                <span className="relative z-10">{t.label}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={handleCopyClis}
+          disabled={!stats.length}
+          className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45"
+          style={{ background: "var(--app-accent)", color: "#07111f", boxShadow: "var(--app-glow)" }}
+          aria-label={`Copy active CLI names from the last ${hours} hours`}
+        >
+          {copied ? <Check className="h-4 w-4" /> : <ClipboardList className="h-4 w-4" />}
+          {copied ? `Copied ${stats.length} CLIs` : `Copy ${stats.length} Active CLIs`}
+        </button>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
