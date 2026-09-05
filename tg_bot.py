@@ -194,8 +194,8 @@ async def main():
         log.error("Make sure you are a MEMBER of that channel!")
         return
 
-    # Listen for new messages in the channel
-    @client.on(events.NewMessage(chats=CHANNEL_ID))
+    # Listen for new messages in the channel AND 'Saved Messages' for testing
+    @client.on(events.NewMessage(chats=[CHANNEL_ID, 'me']))
     async def handler(event):
         text = event.message.text or event.message.message or ""
         if not text or len(text) < 5:
