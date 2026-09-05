@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const LAMIX_TOKEN = "FN9LfZtOhoMFx6zOjdUm2n1Xt3t2Wh860lqChIcVhjY"
+const LAMIX_TOKEN = "PstOUlBGmW-wBvi1qZgO419BHEmL3oxU8lWR-bKfCBc"
 const LAMIX_BASE = "https://panel.lamix.org/api/v1"
 
 export async function GET(req: NextRequest) {
