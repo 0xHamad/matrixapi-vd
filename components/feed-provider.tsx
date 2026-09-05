@@ -80,8 +80,14 @@ export function FeedProvider({ children }: { children: ReactNode }) {
 
         setOnline(true)
 
-        // Update rolling stats
-        if (data.rollingStats) setRollingStats(data.rollingStats)
+        // Update rolling stats only if changed to avoid full app re-renders every 1s
+        if (data.rollingStats) {
+          setRollingStats(prev => {
+            const prevStr = JSON.stringify(prev)
+            const nextStr = JSON.stringify(data.rollingStats)
+            return prevStr === nextStr ? prev : data.rollingStats
+          })
+        }
 
         // Merge new SMS into feed
         const incoming: SmsRecord[] = data.sms || []

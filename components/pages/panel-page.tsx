@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Bar, BarChart, ResponsiveContainer, Cell } from "recharts"
 import { Diamond, Flower2, Coins, MessageSquare, Radio, Globe } from "lucide-react"
 import { useFeed } from "@/components/feed-provider"
@@ -16,11 +16,38 @@ export function PanelPage({ panel }: { panel: Panel }) {
   const isLamix = panel === "lamix"
   const accentVar = isLamix ? "var(--app-lamix)" : "var(--app-purple)"
 
+  const [realRanges, setRealRanges] = useState<any[]>([])
+  const [apiError, setApiError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLamix) return
+    fetch("/api/lamix/proxy?path=ranges")
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) setApiError(d.error)
+        else if (d.ranges) {
+          // Format Lamix ranges to match UI
+          const formatted = d.ranges.map((r: any) => ({
+            name: r.name,
+            country: r.name.replace(/Mobile.*|Fixed.*/, "").trim(),
+            flag: "🌍",
+            numbers: r.numbers || 0,
+            rate: Math.max(...r.rates.map((x: any) => parseFloat(x.payoutRate || "0"))),
+            active: r.active
+          }))
+          setRealRanges(formatted)
+        }
+      })
+      .catch(() => setApiError("network_error"))
+  }, [isLamix])
+
   const rows = useMemo(() => byPanel(feed, panel), [feed, panel])
   const today = useMemo(() => withinMs(rows, 24 * 3_600_000), [rows])
   const stats = useMemo(() => cliStats(rows), [rows])
   const tc = useMemo(() => topCountry(rows), [rows])
-  const ranges = isLamix ? LAMIX_RANGES : PURPLE_RANGES
+  
+  // Use real ranges for Lamix, keep mock for Purple since Purple has no ranges API
+  const displayRanges = isLamix ? realRanges : PURPLE_RANGES
 
   return (
     <div className="space-y-6">
@@ -30,6 +57,12 @@ export function PanelPage({ panel }: { panel: Panel }) {
         subtitle={`Dedicated analytics for the ${isLamix ? "Lamix" : "Purple"} data stream`}
         badge={<PanelBadge panel={panel} />}
       />
+
+      {apiError && (
+        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-semibold">
+          Lamix API Error: {apiError === 'invalid_token' ? 'Your Lamix Token is invalid or revoked. Please update it in .env.local' : apiError}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Messages Today" icon={<MessageSquare className="h-4 w-4" />} accent={isLamix ? "accent" : "accent-2"}>
@@ -70,7 +103,7 @@ export function PanelPage({ panel }: { panel: Panel }) {
 
       <div className="space-y-3">
         <h2 className="text-lg font-semibold text-app-strong">Ranges</h2>
-        <RangesTable ranges={ranges} />
+        <RangesTable ranges={displayRanges} />
       </div>
     </div>
   )

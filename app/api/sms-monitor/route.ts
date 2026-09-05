@@ -97,31 +97,6 @@ async function doFetch() {
   }
 }
 
-// ── Supabase: auto-save new SMS ──────────────────────────────────────────────
-const SUPABASE_URL = "https://owvgnnhayikisrehjkfz.supabase.co"
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93dmdubmhheWlraXNyZWhqa2Z6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODYwOTE1MywiZXhwIjoyMTA0MTg1MTUzfQ.gglfJOcCy_-lZuJKTRoZ-4_cHd0klfz3OT5xPy8QKww"
-const SUPABASE_SEEN = new Set<string>()
-let supabaseReady = false
-
-async function saveToSupabase(rows: any[]) {
-  if (!rows.length) return
-  try {
-    const res = await axios.post(
-      `${SUPABASE_URL}/rest/v1/announcements`,
-      rows,
-      {
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal",
-        },
-        timeout: 5000,
-      }
-    )
-  } catch {}
-}
-
 export async function GET() {
   const now = Date.now()
   if (now - lastFetch > 1000 && !fetching) doFetch()
@@ -135,36 +110,13 @@ export async function GET() {
     return { id, panel: r.panel, cli: r.cli, country: geo.country, countryCode: geo.countryCode, flag: geo.flag, number: num, content: r.content, payout: r.payout, receivedAt: ms }
   })
 
-  // Build rolling stats + auto-save new SMS to Supabase
-  const newForSupabase: any[] = []
-
+  // Build rolling stats
   sms.forEach(s => {
     if (!SEEN.has(s.id)) {
       SEEN.add(s.id)
       HISTORY.push({ id: s.id, cli: s.cli, panel: s.panel, ms: s.receivedAt, content: s.content, range: s.country })
-
-      // Queue for Supabase (skip first boot to avoid mass-insert of old data)
-      if (supabaseReady && !SUPABASE_SEEN.has(s.id)) {
-        SUPABASE_SEEN.add(s.id)
-        newForSupabase.push({
-          platform: s.panel,
-          cli: s.cli,
-          country: s.country,
-          number: s.number,
-          content: s.content,
-          is_new_cli: false,
-          raw_text: `${s.panel.toUpperCase()} | CLI: ${s.cli} | ${s.country} | ${s.content}`,
-        })
-      }
     }
   })
-
-  // After first successful data load, mark ready so future NEW sms get saved
-  if (!supabaseReady && sms.length > 0) supabaseReady = true
-
-  // Save new SMS to Supabase in background (don't await — zero latency)
-  if (newForSupabase.length > 0) saveToSupabase(newForSupabase)
-
   const cut5h = now - 5 * 3600000
   HISTORY = HISTORY.filter(h => h.ms >= cut5h)
 
