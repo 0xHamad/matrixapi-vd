@@ -1,9 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Megaphone, Search, ArrowUp } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Megaphone, Search, BellRing, BellOff } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
-import { AnnouncementCard } from "@/components/announcement-card"
 import { EmptyState, Shimmer, CopyButton } from "@/components/shared"
 import type { AnnouncementRow } from "@/lib/types"
 
@@ -11,12 +10,44 @@ export function Announcements() {
   const [data, setData] = useState<AnnouncementRow[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState("")
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission>("default")
+  const seenIds = useRef<Set<string>>(new Set())
+
+  // Load notification permission state
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setNotifPerm(Notification.permission)
+    }
+  }, [])
+
+  const enableNotifications = async () => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      const p = await Notification.requestPermission()
+      setNotifPerm(p)
+      if (p === "granted") {
+        new Notification("Alerts Enabled!", { body: "You will get notified when new Telegram SMS arrive." })
+      }
+    }
+  }
 
   const fetchData = async () => {
     try {
       const res = await fetch(`/api/announcements?limit=100&t=${Date.now()}`, { cache: "no-store" })
       const json = await res.json()
-      if (json.success) setData(json.data)
+      if (json.success) {
+        const incoming: AnnouncementRow[] = json.data
+        // Fire notifications for new items
+        if (seenIds.current.size > 0 && Notification.permission === "granted") {
+          for (const item of incoming) {
+            if (!seenIds.current.has(item.id)) {
+              const title = item.is_new_cli ? `[NEW CLI] ${item.cli}` : `New SMS: ${item.cli}`
+              new Notification(title, { body: `${item.country} - ${item.content}` })
+            }
+          }
+        }
+        incoming.forEach(i => seenIds.current.add(i.id))
+        setData(incoming)
+      }
     } catch (err) {}
     setLoading(false)
   }
@@ -37,20 +68,36 @@ export function Announcements() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        icon={<Megaphone className="h-5 w-5" />}
-        title="Announcements"
-        subtitle="Live Telegram Messages from Channel"
-        badge={
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
-            style={{ color: "var(--app-good)", background: "color-mix(in srgb, var(--app-good) 14%, transparent)" }}
+      {/* Header with Notification Toggle */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <PageHeader
+          icon={<Megaphone className="h-5 w-5" />}
+          title="Announcements"
+          subtitle="Live Telegram Messages from Channel"
+          badge={
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+              style={{ color: "var(--app-good)", background: "color-mix(in srgb, var(--app-good) 14%, transparent)" }}
+            >
+              <span className="live-dot" />
+              LIVE TG BOT
+            </span>
+          }
+        />
+        {notifPerm !== "denied" && (
+          <button
+            onClick={enableNotifications}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold border transition-all hover:-translate-y-0.5 ${
+              notifPerm === "granted"
+                ? "bg-teal-500/10 text-teal-400 border-teal-500/20 hover:bg-teal-500/20"
+                : "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
+            }`}
           >
-            <span className="live-dot" />
-            LIVE TG BOT
-          </span>
-        }
-      />
+            {notifPerm === "granted" ? <BellRing className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+            {notifPerm === "granted" ? "Alerts Enabled" : "Enable Alerts"}
+          </button>
+        )}
+      </div>
 
       <div
         className="flex items-center gap-2 rounded-xl px-4 py-2.5"
