@@ -10,20 +10,8 @@ import { EmptyState, Shimmer } from "@/components/shared"
 import type { SmsRecord } from "@/lib/types"
 
 const PER_PAGE = 25
-type Filter = "all" | "new" | "lamix" | "purple" | "today" | "hour"
-
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "new", label: "New CLI" },
-  { key: "lamix", label: "Lamix" },
-  { key: "purple", label: "Purple" },
-  { key: "today", label: "Today" },
-  { key: "hour", label: "This Hour" },
-]
-
 export function Announcements() {
   const { feed, ready } = useFeed()
-  const [filter, setFilter] = useState<Filter>("all")
   const [query, setQuery] = useState("")
   const [page, setPage] = useState(1)
   const [newCount, setNewCount] = useState(0)
@@ -48,14 +36,7 @@ export function Announcements() {
   }, [feed])
 
   const filtered = useMemo(() => {
-    const now = Date.now()
     let list: SmsRecord[] = feed
-    if (filter === "new") list = list.filter((s) => s.isNewCli)
-    else if (filter === "lamix") list = list.filter((s) => s.panel === "lamix")
-    else if (filter === "purple") list = list.filter((s) => s.panel === "purple")
-    else if (filter === "today") list = list.filter((s) => now - s.receivedAt < 24 * 3_600_000)
-    else if (filter === "hour") list = list.filter((s) => now - s.receivedAt < 3_600_000)
-
     const q = query.trim().toLowerCase()
     if (q) {
       list = list.filter(
@@ -66,7 +47,7 @@ export function Announcements() {
       )
     }
     return list
-  }, [feed, filter, query])
+  }, [feed, query])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
   const current = Math.min(page, totalPages)
@@ -95,26 +76,6 @@ export function Announcements() {
           </span>
         }
       />
-
-      {/* Filters */}
-      <div className="custom-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-        {FILTERS.map((f) => {
-          const active = filter === f.key
-          return (
-            <button
-              key={f.key}
-              onClick={() => {
-                setFilter(f.key)
-                setPage(1)
-              }}
-              className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${active ? "text-black" : "text-app-muted hover:text-app-strong"}`}
-              style={active ? { background: "var(--app-accent)", boxShadow: "var(--app-glow)" } : { background: "var(--app-card)", border: "1px solid var(--app-border)" }}
-            >
-              {f.label}
-            </button>
-          )
-        })}
-      </div>
 
       {/* Search */}
       <div
@@ -146,7 +107,6 @@ export function Announcements() {
           action={
             <button
               onClick={() => {
-                setFilter("all")
                 setQuery("")
               }}
               className="rounded-lg px-4 py-2 text-sm font-semibold text-black"
