@@ -25,9 +25,9 @@ from telethon import TelegramClient, events
 from telethon.tl.types import PeerChannel
 
 # ===================== CONFIG =====================
-# Get from https://my.telegram.org → API Development Tools
-API_ID   = 12345678           # ← Replace with your api_id (integer)
-API_HASH = "your_api_hash_here"   # ← Replace with your api_hash
+# NO NEED to go to my.telegram.org! Using Official Telegram Android API ID.
+API_ID   = 6
+API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e"
 
 # The private channel to monitor (the one you're a member of)
 CHANNEL_ID = -1003721669079   # works even for private channels you joined
