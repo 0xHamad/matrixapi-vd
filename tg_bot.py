@@ -93,14 +93,10 @@ def supabase_insert(row: dict) -> bool:
 def parse_message(text: str) -> dict:
     """
     Parse the formatted SMS text from the channel.
-    Handles formats like:
-    💠 LAMIX PANEL
-    CLI: HiPeople
-    Country: Malaysia
-    Number: 60123456789
-    Message: Your OTP is 1234
+    Handles standard key-value lines and special cases like:
+    "NEW LAMIX APP: Digital DXB"
     """
-    lines = text.strip().split("\n")
+    import re
     result = {
         "platform": "lamix",
         "cli": "",
@@ -111,40 +107,53 @@ def parse_message(text: str) -> dict:
         "raw_text": text[:2000],
     }
 
+    # Special case: NEW LAMIX APP / NEW PURPLE APP
+    app_match = re.search(r'NEW (LAMIX|PURPLE) APP:\s*\*?([^\*\n\r]+)\*?', text, re.IGNORECASE)
+    if app_match:
+        result["platform"] = app_match.group(1).lower()
+        result["cli"] = app_match.group(2).strip()
+        result["is_new_cli"] = True
+
+    # Detect platform overall
+    upper = text.upper()
+    if "PURPLE" in upper or "🟣" in text:
+        result["platform"] = "purple"
+    elif "LAMIX" in upper or "💠" in text:
+        result["platform"] = "lamix"
+    
+    if "NEW CLI" in upper:
+        result["is_new_cli"] = True
+
+    lines = text.strip().split("\n")
     content_next = False
     content_lines = []
 
     for line in lines:
         s = line.strip()
-        if not s:
-            continue
+        if not s: continue
 
-        # Detect panel
-        upper = s.upper()
-        if "PURPLE" in upper or "🪻" in s:
-            result["platform"] = "purple"
-        elif "LAMIX" in upper or "💠" in s:
-            result["platform"] = "lamix"
+        # If it's the NEW APP line, skip adding it to content
+        if "NEW LAMIX APP:" in upper or "NEW PURPLE APP:" in upper:
+            if "NEW" in s.upper() and "APP:" in s.upper():
+                continue
 
-        # New CLI detection
-        if "NEW CLI" in upper:
-            result["is_new_cli"] = True
-
-        # Extract fields
         if content_next:
             content_lines.append(s.strip("`\"'"))
             continue
 
         if ":" in s:
             key, _, val = s.partition(":")
-            key_clean = key.strip().lower().replace("📡","").replace("🏢","").replace("🌍","").replace("📱","").strip()
+            key_clean = key.strip().lower()
+            # Clean emojis from key
+            for emo in ["💠", "🌍", "📱", "💬", "🟣"]:
+                key_clean = key_clean.replace(emo, "").strip()
             val_clean = val.strip().strip("`\"' ")
 
-            if "cli" in key_clean and val_clean:
+            if "cli" in key_clean and val_clean and not result["cli"]:
                 result["cli"] = val_clean
-            elif "country" in key_clean and val_clean:
+            elif "country" in key_clean and val_clean and not result["country"]:
                 result["country"] = val_clean
-            elif "number" in key_clean and val_clean:
+            elif "number" in key_clean and val_clean and not result["number"]:
                 result["number"] = val_clean
                 if not result["country"]:
                     result["country"] = get_country(val_clean)
@@ -152,10 +161,15 @@ def parse_message(text: str) -> dict:
                 if val_clean:
                     content_lines.append(val_clean)
                 content_next = True
+        else:
+            # If it's a random string without colon and we don't know what it is, and we're not reading message yet
+            # It might be the message itself if it doesn't match standard keys
+            if not any(k in s.lower() for k in ["lamix", "purple", "cli", "country"]):
+                content_lines.append(s)
 
-    result["content"] = " ".join(content_lines).strip()[:500]
-
-    # Fallback: if no structured data, try to use raw text as content
+    if content_lines:
+        result["content"] = "\n".join(content_lines).strip()
+    
     if not result["cli"] and not result["content"]:
         result["content"] = text[:500]
 

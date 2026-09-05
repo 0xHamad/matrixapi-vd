@@ -66,9 +66,9 @@ export function Announcements() {
       </div>
 
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Shimmer key={i} className="h-48 w-full" />
+            <Shimmer key={i} className="h-56 w-full rounded-2xl" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -77,26 +77,75 @@ export function Announcements() {
           desc="Ensure the Telegram Userbot is running and connected to the channel."
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {filtered.map((s) => (
-            <div key={s.id} className="p-4 rounded-xl flex flex-col gap-3" style={{ background: "var(--app-card)", border: "1px solid var(--app-border)" }}>
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="text-xs font-semibold text-app-muted uppercase tracking-wider">{new Date(s.created_at).toLocaleString()}</div>
-                  <div className="text-lg font-bold mt-1 text-app-strong">{s.cli || "Unknown CLI"}</div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((s) => {
+            const isLamix = s.platform === "lamix"
+            const accent = isLamix ? "var(--app-lamix)" : "var(--app-purple)"
+            const bgAccent = isLamix ? "rgba(45, 212, 191, 0.1)" : "rgba(168, 85, 247, 0.1)"
+
+            return (
+              <div 
+                key={s.id} 
+                className="group relative flex flex-col justify-between overflow-hidden rounded-2xl p-6 transition-all hover:-translate-y-1 hover:shadow-xl"
+                style={{ background: "var(--app-bg-2)", border: "1px solid var(--app-border)" }}
+              >
+                {/* Ambient Glow */}
+                <div 
+                  className="absolute -right-12 -top-12 h-32 w-32 rounded-full blur-[50px] transition-opacity group-hover:opacity-60 opacity-20"
+                  style={{ background: accent }}
+                />
+
+                <div className="relative z-10 flex flex-col gap-4">
+                  {/* Header: Platform & Time */}
+                  <div className="flex items-center justify-between">
+                    <span 
+                      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest"
+                      style={{ color: accent, background: bgAccent }}
+                    >
+                      {isLamix ? "💠 LAMIX" : "🟣 PURPLE"}
+                    </span>
+                    <span className="text-xs font-medium text-app-muted">
+                      {new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+
+                  {/* CLI Title & Badges */}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-bold tracking-tight text-white truncate">
+                        {s.cli || "Unknown CLI"}
+                      </h3>
+                      {s.is_new_cli && (
+                        <span className="shrink-0 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/20">
+                          NEW
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-2 flex items-center gap-3 text-sm font-medium text-app-muted">
+                      <div className="flex items-center gap-1.5 rounded-md bg-black/20 px-2 py-1 border border-white/5">
+                        <span>🌍</span>
+                        <span>{s.country || "Unknown"}</span>
+                      </div>
+                      {s.number && (
+                        <div className="flex items-center gap-1.5 rounded-md bg-black/20 px-2 py-1 border border-white/5 font-mono text-xs">
+                          <span>📱</span>
+                          <span>{s.number}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Message Content */}
+                  <div className="mt-2 relative rounded-xl bg-[#030712] p-4 border border-white/5 shadow-inner">
+                    <div className="absolute left-0 top-0 h-full w-1 rounded-l-xl" style={{ background: accent }} />
+                    <p className="whitespace-pre-wrap text-sm text-gray-300 font-mono leading-relaxed line-clamp-4 group-hover:line-clamp-none transition-all">
+                      {s.content || s.raw_text}
+                    </p>
+                  </div>
                 </div>
-                <span className="px-2 py-1 rounded text-[11px] font-semibold uppercase tracking-widest bg-blue-500/10 text-blue-400">TELEGRAM</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-app-muted">
-                <span>🌍 {s.country || "Unknown"}</span>
-                <span>•</span>
-                <span className="font-mono">{s.number || "---"}</span>
-              </div>
-              <div className="mt-2 text-sm text-app-strong bg-black/20 p-3 rounded-lg border border-white/5 break-words">
-                {s.content || s.raw_text}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
