@@ -14,7 +14,7 @@ export function Announcements() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch(`/api/announcements?platform=telegram&limit=100`)
+      const res = await fetch(`/api/announcements?limit=100`)
       const json = await res.json()
       if (json.success) setData(json.data)
     } catch (err) {}
