@@ -7,11 +7,13 @@ function getSupabase() {
   return createClient(url, key)
 }
 
+export const dynamic = "force-dynamic"
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get("page") || "1")
-    const limit = 25
+    const limit = parseInt(searchParams.get("limit") || "100")
     const offset = (page - 1) * limit
     const platform = searchParams.get("platform") || null
     const search = searchParams.get("search") || null
