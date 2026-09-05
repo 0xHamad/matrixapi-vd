@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Megaphone, Search, ArrowUp } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { AnnouncementCard } from "@/components/announcement-card"
-import { EmptyState, Shimmer } from "@/components/shared"
+import { EmptyState, Shimmer, CopyButton } from "@/components/shared"
 import type { AnnouncementRow } from "@/lib/types"
 
 export function Announcements() {
@@ -136,10 +136,27 @@ export function Announcements() {
                   </div>
 
                   {/* Message Content */}
-                  <div className="mt-2 relative rounded-xl bg-[#030712] p-4 border border-white/5 shadow-inner">
+                  <div className="mt-2 relative rounded-xl bg-[#030712] p-4 border border-white/5 shadow-inner group/copy">
                     <div className="absolute left-0 top-0 h-full w-1 rounded-l-xl" style={{ background: accent }} />
-                    <p className="whitespace-pre-wrap text-sm text-gray-300 font-mono leading-relaxed line-clamp-4 group-hover:line-clamp-none transition-all">
-                      {s.content || s.raw_text}
+                    <div className="absolute top-2 right-2 opacity-0 group-hover/copy:opacity-100 transition-opacity">
+                      <CopyButton text={s.content || s.raw_text || ""} label="Copy SMS" />
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm text-gray-300 font-mono leading-relaxed line-clamp-4 group-hover:line-clamp-none transition-all pr-6">
+                      {(s.content || s.raw_text || "")
+                        .split('\n')
+                        .filter(line => {
+                          const upper = line.toUpperCase()
+                          return !upper.includes('NEW LAMIX APP') &&
+                                 !upper.includes('NEW PURPLE APP') &&
+                                 !upper.includes('COUNTRY:') &&
+                                 !upper.includes('CLI:') &&
+                                 !upper.includes('NUMBER:') &&
+                                 !upper.includes('LAMIX PANEL') &&
+                                 !upper.includes('MESSAGE:')
+                        })
+                        .join('\n')
+                        .trim()
+                      }
                     </p>
                   </div>
                 </div>

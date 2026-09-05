@@ -149,29 +149,33 @@ def parse_message(text: str) -> dict:
                 key_clean = key_clean.replace(emo, "").strip()
             val_clean = val.strip().strip("`\"' ")
 
-            if "cli" in key_clean and val_clean and not result["cli"]:
+            if key_clean in ["cli", "sender", "from"] and val_clean and not result["cli"]:
                 result["cli"] = val_clean
-            elif "country" in key_clean and val_clean and not result["country"]:
+            elif key_clean == "country" and val_clean and not result["country"]:
                 result["country"] = val_clean
-            elif "number" in key_clean and val_clean and not result["number"]:
+            elif key_clean == "number" and val_clean and not result["number"]:
                 result["number"] = val_clean
-                if not result["country"]:
-                    result["country"] = get_country(val_clean)
-            elif "message" in key_clean or "msg" in key_clean:
+            elif key_clean in ["message", "msg", "sms"]:
                 if val_clean:
                     content_lines.append(val_clean)
                 content_next = True
+            else:
+                # If it has a colon but isn't a standard key, it's part of the actual SMS message text
+                if not any(k in s.upper() for k in ["NEW LAMIX APP", "NEW PURPLE APP"]):
+                    content_lines.append(s)
         else:
-            # If it's a random string without colon and we don't know what it is, and we're not reading message yet
-            # It might be the message itself if it doesn't match standard keys
-            if not any(k in s.lower() for k in ["lamix", "purple", "cli", "country"]):
+            # Random string without colon
+            if not any(k in s.upper() for k in ["NEW LAMIX APP", "NEW PURPLE APP", "LAMIX PANEL"]):
                 content_lines.append(s)
 
     if content_lines:
         result["content"] = "\n".join(content_lines).strip()
-    
-    if not result["cli"] and not result["content"]:
-        result["content"] = text[:500]
+    else:
+        # Fallback if content is completely empty: remove the headers from raw text manually
+        clean_fb = text
+        clean_fb = re.sub(r'🆕\s*\*\*NEW (LAMIX|PURPLE) APP:.*?\*\*', '', clean_fb, flags=re.IGNORECASE)
+        clean_fb = re.sub(r'Country:.*', '', clean_fb, flags=re.IGNORECASE)
+        result["content"] = clean_fb.strip()
 
     # Fix country from number if still empty
     if not result["country"] and result["number"]:

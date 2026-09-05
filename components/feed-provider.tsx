@@ -112,15 +112,7 @@ export function FeedProvider({ children }: { children: ReactNode }) {
           })
 
           // Show toast for new entries (max 1 per batch to avoid spam)
-          const latest = newOnes[0]
-          pushToast({
-            id: latest.id,
-            title: latest.isNewCli
-              ? `🆕 NEW CLI: ${latest.cli}`
-              : `New ${latest.panel === "lamix" ? "Lamix" : "Purple"} SMS`,
-            desc: `${latest.flag} ${latest.country} • ${latest.cli}`,
-            panel: latest.isNewCli ? "new" : latest.panel,
-          })
+          const latest = newOnes[0]; const title = latest.isNewCli ? `?? NEW CLI: ${latest.cli}` : `New ${latest.panel === "lamix" ? "Lamix" : "Purple"} SMS`; const desc = `${latest.flag} ${latest.country} � ${latest.cli}`; pushToast({ id: latest.id, title, desc, panel: latest.isNewCli ? "new" : latest.panel }); if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") { new Notification(title, { body: desc + "\n" + latest.content }); }
         }
       } catch {
         setOnline(false)

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { Activity, Diamond, Flower2, Radio } from "lucide-react"
 import { useFeed } from "@/components/feed-provider"
 import { PanelSelector, type PanelFilter } from "@/components/panel-selector"
-import { AnimatedNumber, PanelBadge, StatCard, Shimmer } from "@/components/shared"
+import { AnimatedNumber, PanelBadge, StatCard, Shimmer, CopyButton } from "@/components/shared"
 import { byPanel, activeCliCount } from "@/lib/stats"
 import { relativeTime, fullTime, maskNumber, euro } from "@/lib/format"
 import { PageHeader } from "@/components/page-header"
@@ -102,10 +102,15 @@ function FeedTable({ rows }: { rows: ReturnType<typeof byPanel> }) {
                   >
                     {s.cli}
                   </td>
-                  <td className="max-w-[260px] px-4 py-3">
-                    <span className="block truncate text-app-muted" title={s.content}>
-                      {s.content}
-                    </span>
+                  <td className="max-w-[260px] px-4 py-3 relative group/copy">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="block truncate text-app-muted" title={s.content}>
+                        {s.content}
+                      </span>
+                      <div className="opacity-0 group-hover/copy:opacity-100 transition-opacity flex-shrink-0">
+                        <CopyButton text={s.content} label="Copy SMS" />
+                      </div>
+                    </div>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     <span

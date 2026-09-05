@@ -22,9 +22,25 @@ export function euro(n: number): string {
 
 export async function copyText(text: string): Promise<boolean> {
   try {
-    await navigator.clipboard.writeText(text)
-    return true
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+      return true
+    }
+    throw new Error("clipboard api not available")
   } catch {
-    return false
+    try {
+      const el = document.createElement("textarea")
+      el.value = text
+      el.setAttribute("readonly", "")
+      el.style.position = "absolute"
+      el.style.left = "-9999px"
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand("copy")
+      document.body.removeChild(el)
+      return true
+    } catch {
+      return false
+    }
   }
 }

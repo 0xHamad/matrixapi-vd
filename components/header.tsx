@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
-import { Menu, Search } from "lucide-react"
+import { Menu, Search, BellRing, BellOff } from "lucide-react"
 import { NAV } from "@/components/sidebar"
 
 function useClock() {
@@ -24,6 +24,42 @@ function useClock() {
     return () => clearInterval(t)
   }, [])
   return time
+}
+
+function NotificationToggle() {
+  const [perm, setPerm] = useState<NotificationPermission>("default")
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setPerm(Notification.permission)
+    }
+  }, [])
+
+  const requestPerm = async () => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      const p = await Notification.requestPermission()
+      setPerm(p)
+      if (p === "granted") {
+        new Notification("Notifications Enabled", { body: "You will now receive alerts for new incoming SMS." })
+      }
+    }
+  }
+
+  if (perm === "denied") return null
+
+  return (
+    <button
+      onClick={requestPerm}
+      className={`hidden sm:flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors border ${
+        perm === "granted" 
+          ? "bg-teal-500/10 text-teal-400 border-teal-500/20 hover:bg-teal-500/20"
+          : "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
+      }`}
+    >
+      {perm === "granted" ? <BellRing className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+      {perm === "granted" ? "Alerts On" : "Enable Alerts"}
+    </button>
+  )
 }
 
 export function Header({
@@ -55,7 +91,8 @@ export function Header({
       <div className="hidden items-center gap-2 text-sm sm:flex">
         <span className="text-app-muted">Dashboard</span>
         <span className="text-app-muted">/</span>
-        <span className="font-medium text-app-strong">{current}</span>
+        <span className="font-medium text-app-strong mr-4">{current}</span>
+        <NotificationToggle />
       </div>
 
       <button
@@ -65,9 +102,9 @@ export function Header({
         style={{ background: "var(--app-card)", border: "1px solid var(--app-border)" }}
       >
         <Search className="h-4 w-4" />
-        <span className="hidden sm:inline">Search CLIs, countries…</span>
+        <span className="hidden sm:inline">Search CLIs, countries...</span>
         <kbd className="ml-auto hidden rounded border border-[var(--app-border)] px-1.5 py-0.5 text-[10px] sm:inline">
-          ⌘K
+          CTRL K
         </kbd>
       </button>
 
