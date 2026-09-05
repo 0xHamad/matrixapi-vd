@@ -5,9 +5,12 @@ import { X } from "lucide-react"
 import { useFeed } from "@/components/feed-provider"
 
 export function ToastViewport() {
-  const { toasts, dismissToast } = useFeed()
+  const { toasts, dismissToast, showToasts } = useFeed()
+  
+  if (!showToasts) return null
+
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-[80] flex w-[320px] max-w-[calc(100vw-2rem)] flex-col gap-2">
+    <div className="pointer-events-none fixed top-20 right-4 z-[80] flex w-[320px] max-w-[calc(100vw-2rem)] flex-col gap-2">
       <AnimatePresence>
         {toasts.map((t) => {
           const color =

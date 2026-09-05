@@ -1,10 +1,10 @@
-﻿"use client"
+"use client"
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import type { SmsRecord, Panel } from "@/lib/types"
 
 const FEED_KEY = "sms_feed_cache"
-const MAX = 200
+const MAX = 50000
 
 export interface ToastItem {
   id: string
@@ -18,6 +18,8 @@ interface FeedCtx {
   ready: boolean
   toasts: ToastItem[]
   dismissToast: (id: string) => void
+  showToasts: boolean
+  toggleToasts: () => void
   rollingStats: {
     hourly: CliStatRaw[]
     fourHourly: CliStatRaw[]
@@ -41,6 +43,7 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   const [online, setOnline] = useState(true)
   const [toasts, setToasts] = useState<ToastItem[]>([])
+  const [showToasts, setShowToasts] = useState(true)
   const [rollingStats, setRollingStats] = useState<FeedCtx["rollingStats"]>({
     hourly: [], fourHourly: [], daily: [],
   })
@@ -52,8 +55,7 @@ export function FeedProvider({ children }: { children: ReactNode }) {
       const raw = localStorage.getItem(FEED_KEY)
       if (raw) {
         const parsed: SmsRecord[] = JSON.parse(raw)
-        parsed.forEach(s => seen.current.add(s.id))
-        setFeed(parsed)
+        parsed.forEach(s => seen.current.add(s.id)); setFeed(parsed); if (localStorage.getItem('hide_toasts') === '1') setShowToasts(false);
       }
     } catch {}
     setReady(true)
@@ -63,7 +65,7 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ready) return
     try {
-      localStorage.setItem(FEED_KEY, JSON.stringify(feed.slice(0, MAX)))
+      localStorage.setItem(FEED_KEY, JSON.stringify(feed.slice(0, 3000)))
     } catch {}
   }, [feed, ready])
 
@@ -117,7 +119,7 @@ export function FeedProvider({ children }: { children: ReactNode }) {
           const isNew = latest.isNewCli
           const title = isNew ? `[NEW CLI] ${latest.cli}` : `New ${latest.panel === "lamix" ? "Lamix" : "Purple"} SMS`
           const desc = `${latest.flag} ${latest.country} - ${latest.cli}`
-          pushToast({ id: latest.id, title, desc, panel: isNew ? "new" : latest.panel })
+          if (localStorage.getItem("hide_toasts") !== "1") { pushToast({ id: latest.id, title, desc, panel: isNew ? "new" : latest.panel }) }
           if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
             new Notification(title, { body: desc + (latest.content ? "\n" + latest.content : "") })
           }
@@ -133,7 +135,10 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   }, [ready])
 
   function pushToast(t: ToastItem) {
-    setToasts(prev => [t, ...prev].slice(0, 3))
+    setToasts(prev => {
+      // Respect showToasts state directly here (though we also check before calling)
+      return [t, ...prev].slice(0, 3)
+    })
     setTimeout(() => dismissToast(t.id), 4000)
   }
 
@@ -141,9 +146,19 @@ export function FeedProvider({ children }: { children: ReactNode }) {
     setToasts(prev => prev.filter(t => t.id !== id))
   }
 
+  function toggleToasts() {
+    setShowToasts(prev => {
+      const next = !prev
+      if (!next) localStorage.setItem('hide_toasts', '1')
+      else localStorage.removeItem('hide_toasts')
+      if (!next) setToasts([]) // Clear existing when turning off
+      return next
+    })
+  }
+
   const value = useMemo(
-    () => ({ feed, ready, toasts, dismissToast, rollingStats, online }),
-    [feed, ready, toasts, rollingStats, online],
+    () => ({ feed, ready, toasts, dismissToast, showToasts, toggleToasts, rollingStats, online }),
+    [feed, ready, toasts, showToasts, rollingStats, online],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

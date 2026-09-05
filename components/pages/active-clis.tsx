@@ -28,14 +28,12 @@ export function ActiveClis() {
     return () => clearInterval(t)
   }, [])
 
-  // Use real rolling stats from API
+  // Calculate stats directly from the accumulated feed array for accuracy
   const stats = useMemo(() => {
-    const raw = hours === 1 ? rollingStats.hourly : hours === 4 ? rollingStats.fourHourly : rollingStats.daily
-    return (raw || []).map(r => ({
-      cli: r.cli, panel: r.panel as any, country: r.range || "", flag: "🌍",
-      count: r.count, payout: 0, lastMessage: r.content, lastAt: Date.now(), hourly: [],
-    }))
-  }, [rollingStats, hours])
+    const recentFeed = withinMs(feed, hours * 3_600_000)
+    return cliStats(recentFeed)
+  }, [feed, hours])
+  
   const totalSms = stats.reduce((s, c) => s + c.count, 0)
   const max = stats[0]?.count ?? 1
   const avg = stats.length ? totalSms / stats.length : 0

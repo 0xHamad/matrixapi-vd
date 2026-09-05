@@ -34,8 +34,11 @@ export function LiveFeed() {
   const [panel, setPanel] = useState<PanelFilter>("all")
   const [now] = useState(Date.now())
 
-  const lamixCount = useMemo(() => feed.filter((s) => s.panel === "lamix").length, [feed])
-  const purpleCount = feed.length - lamixCount
+  const todayStart = new Date().setHours(0, 0, 0, 0)
+  const todayFeed = useMemo(() => feed.filter(s => s.receivedAt >= todayStart), [feed, todayStart])
+  
+  const lamixCount = useMemo(() => todayFeed.filter((s) => s.panel === "lamix").length, [todayFeed])
+  const purpleCount = todayFeed.length - lamixCount
   const active = useMemo(() => activeCliCount(feed), [feed])
   const rows = useMemo(() => byPanel(feed, panel), [feed, panel])
 
@@ -48,13 +51,13 @@ export function LiveFeed() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total SMS" icon={<Activity className="h-4 w-4" />} delay={0}>
-          <AnimatedNumber value={feed.length} />
+        <StatCard label="Today SMS" icon={<Activity className="h-4 w-4" />} delay={0}>
+          <AnimatedNumber value={todayFeed.length} />
         </StatCard>
-        <StatCard label="Lamix SMS" icon={<Diamond className="h-4 w-4" />} accent="accent" delay={0.05}>
+        <StatCard label="Lamix Today" icon={<Diamond className="h-4 w-4" />} accent="accent" delay={0.05}>
           <AnimatedNumber value={lamixCount} />
         </StatCard>
-        <StatCard label="Purple SMS" icon={<Flower2 className="h-4 w-4" />} accent="accent-2" delay={0.1}>
+        <StatCard label="Purple Today" icon={<Flower2 className="h-4 w-4" />} accent="accent-2" delay={0.1}>
           <AnimatedNumber value={purpleCount} />
         </StatCard>
         <StatCard label="Active CLIs" icon={<Radio className="h-4 w-4" />} accent="good" delay={0.15}>

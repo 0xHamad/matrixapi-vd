@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
-import { Menu, Search, BellRing, BellOff } from "lucide-react"
+import { Menu, Search, BellRing, BellOff, MessageSquare, MessageSquareOff } from "lucide-react"
 import { NAV } from "@/components/sidebar"
+import { useFeed } from "@/components/feed-provider"
 
 function useClock() {
   const [time, setTime] = useState("")
@@ -50,14 +51,15 @@ function NotificationToggle() {
   return (
     <button
       onClick={requestPerm}
-      className={`hidden sm:flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors border ${
+      className={`flex items-center gap-1.5 sm:gap-2 rounded-lg px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-semibold transition-colors border ${
         perm === "granted" 
           ? "bg-teal-500/10 text-teal-400 border-teal-500/20 hover:bg-teal-500/20"
           : "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
       }`}
     >
-      {perm === "granted" ? <BellRing className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
-      {perm === "granted" ? "Alerts On" : "Enable Alerts"}
+      {perm === "granted" ? <BellRing className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <BellOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+      <span className="hidden sm:inline">{perm === "granted" ? "Alerts On" : "Enable Alerts"}</span>
+      <span className="sm:hidden">{perm === "granted" ? "Alerts" : "Alerts"}</span>
     </button>
   )
 }
@@ -72,6 +74,7 @@ export function Header({
   const pathname = usePathname()
   const clock = useClock()
   const current = NAV.find((n) => n.href === pathname)?.label ?? "Dashboard"
+  const { showToasts, toggleToasts } = useFeed()
 
   return (
     <header
@@ -88,10 +91,10 @@ export function Header({
         <Menu className="h-5 w-5" />
       </button>
 
-      <div className="hidden items-center gap-2 text-sm sm:flex">
-        <span className="text-app-muted">Dashboard</span>
-        <span className="text-app-muted">/</span>
-        <span className="font-medium text-app-strong mr-4">{current}</span>
+      <div className="flex items-center gap-1 sm:gap-2 text-sm">
+        <span className="hidden sm:inline text-app-muted">Dashboard</span>
+        <span className="hidden sm:inline text-app-muted">/</span>
+        <span className="hidden sm:inline font-medium text-app-strong mr-4">{current}</span>
         <NotificationToggle />
       </div>
 
@@ -109,6 +112,20 @@ export function Header({
       </button>
 
       <div className="ml-auto flex items-center gap-3 md:ml-0">
+        <button
+          onClick={toggleToasts}
+          className={`flex items-center gap-1.5 sm:gap-2 rounded-lg px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-semibold transition-colors border ${
+            showToasts 
+              ? "bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20"
+              : "bg-gray-500/10 text-gray-400 border-gray-500/20 hover:bg-gray-500/20"
+          }`}
+          title="Toggle In-App Popup Notifications"
+        >
+          {showToasts ? <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <MessageSquareOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+          <span className="hidden sm:inline">{showToasts ? "Popups On" : "Popups Off"}</span>
+          <span className="sm:hidden">{showToasts ? "On" : "Off"}</span>
+        </button>
+
         <div
           className="hidden items-center gap-2 rounded-full px-3 py-1.5 sm:flex"
           style={{ background: "var(--app-card)", border: "1px solid var(--app-border)" }}
