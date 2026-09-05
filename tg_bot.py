@@ -186,8 +186,35 @@ async def main():
         log.error("Make sure you are a MEMBER of that channel!")
         return
 
-    # Listen for new messages in the channel, 'Saved Messages', and the specific chat ID
-    @client.on(events.NewMessage(chats=[CHANNEL_ID, 'me', 6117528428]))
+    # Fetch the last 100 messages from the channel for history
+    log.info("Fetching the latest 100 messages from the channel to backfill web...")
+    try:
+        # Get existing to avoid duplicates on restart
+        import requests
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json"
+        }
+        res = requests.get(f"{SUPABASE_URL}/rest/v1/announcements?select=raw_text&limit=500", headers=headers)
+        existing = {x.get("raw_text") for x in res.json()} if res.status_code == 200 else set()
+
+        history = await client.get_messages(CHANNEL_ID, limit=100)
+        added = 0
+        for msg in reversed(history):
+            text = msg.text or msg.message or ""
+            if len(text) > 5:
+                parsed = parse_message(text)
+                if parsed["raw_text"] not in existing:
+                    if supabase_insert(parsed):
+                        existing.add(parsed["raw_text"])
+                        added += 1
+        log.info(f"✅ Backfill complete! Added {added} missing messages to web.")
+    except Exception as e:
+        log.error(f"Failed to fetch history: {e}")
+
+    # Listen for live new messages ONLY in the main channel
+    @client.on(events.NewMessage(chats=CHANNEL_ID))
     async def handler(event):
         text = event.message.text or event.message.message or ""
         if not text or len(text) < 5:
@@ -203,7 +230,7 @@ async def main():
         else:
             log.error(f"❌ Supabase save failed")
 
-    log.info("👂 Listening for new messages... (Ctrl+C to stop)")
+    log.info("👂 Listening for live new messages... (Ctrl+C to stop)")
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
