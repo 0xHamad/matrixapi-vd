@@ -179,8 +179,10 @@ async def main():
 
     # Verify we can access the channel
     try:
-        channel = await client.get_entity(PeerChannel(abs(CHANNEL_ID)))
-        log.info(f"✅ Channel found: {getattr(channel, 'title', CHANNEL_ID)}")
+        # Fetch dialogs once to populate Telethon's entity cache for new accounts
+        await client.get_dialogs()
+        entity = await client.get_entity(CHANNEL_ID)
+        log.info(f"✅ Channel found: {getattr(entity, 'title', CHANNEL_ID)}")
     except Exception as e:
         log.error(f"❌ Cannot access channel {CHANNEL_ID}: {e}")
         log.error("Make sure you are a MEMBER of that channel!")
