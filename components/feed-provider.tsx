@@ -1,4 +1,4 @@
-"use client"
+ï»¿"use client"
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import type { SmsRecord, Panel } from "@/lib/types"
@@ -112,7 +112,15 @@ export function FeedProvider({ children }: { children: ReactNode }) {
           })
 
           // Show toast for new entries (max 1 per batch to avoid spam)
-          const latest = newOnes[0]; const title = latest.isNewCli ? `?? NEW CLI: ${latest.cli}` : `New ${latest.panel === "lamix" ? "Lamix" : "Purple"} SMS`; const desc = `${latest.flag} ${latest.country} • ${latest.cli}`; pushToast({ id: latest.id, title, desc, panel: latest.isNewCli ? "new" : latest.panel }); if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") { new Notification(title, { body: desc + "\n" + latest.content }); }
+          // Show toast for new entries (max 1 per batch to avoid spam)
+          const latest = newOnes[0]
+          const isNew = latest.isNewCli
+          const title = isNew ? `[NEW CLI] ${latest.cli}` : `New ${latest.panel === "lamix" ? "Lamix" : "Purple"} SMS`
+          const desc = `${latest.flag} ${latest.country} - ${latest.cli}`
+          pushToast({ id: latest.id, title, desc, panel: isNew ? "new" : latest.panel })
+          if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+            new Notification(title, { body: desc + (latest.content ? "\n" + latest.content : "") })
+          }
         }
       } catch {
         setOnline(false)
