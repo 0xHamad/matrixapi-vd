@@ -5,18 +5,10 @@ from telethon import TelegramClient
 API_ID = 6
 API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e"
 
-# The same proxy we used before, just in case
-PROXY = {
-    'proxy_type': 'http',
-    'addr': 'geo.floppydata.com',
-    'port': 10080,
-    'username': 'brJq0DlYdXOnayct',
-    'password': '4ItJqAadiH8JymOy'
-}
-
 async def main():
     print("Connecting to Telegram...")
-    client = TelegramClient("matrix_userbot", API_ID, API_HASH, proxy=PROXY)
+    # Proxy removed because QR login does not require it and the current proxy returns 407
+    client = TelegramClient("matrix_userbot", API_ID, API_HASH)
     await client.connect()
 
     if await client.is_user_authorized():
