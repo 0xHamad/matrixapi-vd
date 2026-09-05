@@ -33,8 +33,8 @@ API_HASH = "your_api_hash_here"   # ← Replace with your api_hash
 CHANNEL_ID = -1003721669079   # works even for private channels you joined
 
 # Supabase
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://YOUR_PROJECT.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "YOUR_SERVICE_ROLE_KEY")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://owvgnnhayikisrehjkfz.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93dmdubmhheWlraXNyZWhqa2Z6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODYwOTE1MywiZXhwIjoyMTA0MTg1MTUzfQ.gglfJOcCy_-lZuJKTRoZ-4_cHd0klfz3OT5xPy8QKww")
 
 # Session file name (saved locally after first login)
 SESSION_NAME = "matrix_userbot"
