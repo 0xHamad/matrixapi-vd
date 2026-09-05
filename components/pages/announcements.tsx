@@ -84,7 +84,7 @@ export function Announcements() {
       <PageHeader
         icon={<Megaphone className="h-5 w-5" />}
         title="Announcements"
-        subtitle="SMS messages forwarded from the Telegram bot, persisted permanently"
+        subtitle="SMS messages forwarded from the Telegram bot"
         badge={
           <span
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
