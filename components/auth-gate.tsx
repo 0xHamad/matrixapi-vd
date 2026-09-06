@@ -10,22 +10,22 @@ export function AuthGate() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState(false)
+  const [errorMsg, setErrorMsg] = useState("")
   const [shake, setShake] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  function onSubmit(event: FormEvent) {
+  async function onSubmit(event: FormEvent) {
     event.preventDefault()
     setLoading(true)
+    setErrorMsg("")
 
-    window.setTimeout(() => {
-      if (!login(username.trim(), password)) {
-        setError(true)
-        setShake(true)
-        window.setTimeout(() => setShake(false), 450)
-      }
-      setLoading(false)
-    }, 420)
+    const res = await login(username.trim(), password)
+    if (!res.success) {
+      setErrorMsg(res.error || "Login failed")
+      setShake(true)
+      setTimeout(() => setShake(false), 450)
+    }
+    setLoading(false)
   }
 
   return (
@@ -54,7 +54,7 @@ export function AuthGate() {
             <Field label="Username" icon={<UserRound className="h-[18px] w-[18px]" />}>
               <input
                 value={username}
-                onChange={(event) => { setUsername(event.target.value); setError(false) }}
+                onChange={(event) => { setUsername(event.target.value); setErrorMsg("") }}
                 autoComplete="username"
                 className="w-full bg-transparent text-[15px] text-app-strong outline-none placeholder:text-app-muted"
                 required
@@ -65,7 +65,7 @@ export function AuthGate() {
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
-                onChange={(event) => { setPassword(event.target.value); setError(false) }}
+                onChange={(event) => { setPassword(event.target.value); setErrorMsg("") }}
                 autoComplete="current-password"
                 className="w-full bg-transparent text-[15px] text-app-strong outline-none placeholder:text-app-muted"
                 required
@@ -80,7 +80,7 @@ export function AuthGate() {
               </button>
             </Field>
 
-            {error && <p className="text-center text-sm font-medium text-[var(--app-danger)]">Invalid username or password.</p>}
+            {errorMsg && <p className="text-center text-sm font-medium text-[var(--app-danger)]">{errorMsg}</p>}
 
             <button type="submit" disabled={loading} className="login-button mt-2 flex w-full items-center justify-between rounded-2xl px-5 py-4 text-sm font-semibold disabled:cursor-wait disabled:opacity-70">
               <span>{loading ? "Signing in..." : "Sign in"}</span>
