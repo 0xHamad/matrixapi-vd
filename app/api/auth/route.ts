@@ -85,7 +85,7 @@ export async function POST(req: Request) {
     }
 
     if (action === "logout") {
-      const cookieStore = cookies()
+      const cookieStore = await cookies()
       const sid = cookieStore.get("matrix_session")?.value
       if (sid && db.sessions[sid]) {
         delete db.sessions[sid]
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
     }
 
     if (action === "change_password") {
-      const cookieStore = cookies()
+      const cookieStore = await cookies()
       const sid = cookieStore.get("matrix_session")?.value
       if (!sid || !db.sessions[sid]) {
         return NextResponse.json({ success: false, error: "Not logged in" })
@@ -116,7 +116,7 @@ export async function POST(req: Request) {
     }
 
     if (action === "me") {
-      const cookieStore = cookies()
+      const cookieStore = await cookies()
       const sid = cookieStore.get("matrix_session")?.value
       if (!sid || !db.sessions[sid]) {
         return NextResponse.json({ success: false })
