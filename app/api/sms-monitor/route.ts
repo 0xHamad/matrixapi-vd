@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import axios from "axios"
 
-const LAMIX_TOKEN = "PstOUlBGmW-wBvi1qZgO419BHEmL3oxU8lWR-bKfCBc"
+const LAMIX_TOKEN = "5INySWxUNj3A84FMRqbDLw8546XpJ19999ZTz5HXxTM"
 const PURPLE_TOKEN = "QlZTR0FOfkJET1dI"
 const PURPLE_URL = "http://137.74.1.203/crapi/reseller/mdr.php"
 const FETCH_RECORDS = 50

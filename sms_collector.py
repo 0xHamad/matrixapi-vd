@@ -22,8 +22,8 @@ import logging
 import hashlib
 from datetime import datetime
 
-# ===================== CONFIG =====================
-LAMIX_TOKEN  = "FN9LfZtOhoMFx6zOjdUm2n1Xt3t2Wh860lqChIcVhjY"
+# ===================== CONFIG =====================# --- API Config ---
+LAMIX_TOKEN  = "5INySWxUNj3A84FMRqbDLw8546XpJ19999ZTz5HXxTM"
 PURPLE_TOKEN = "QlZTR0FOfkJET1dI"
 PURPLE_URL   = "http://137.74.1.203/crapi/reseller/mdr.php"
 
