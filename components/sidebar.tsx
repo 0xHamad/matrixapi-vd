@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Radio, Diamond, Flower2, BarChart3, Megaphone, SatelliteDish, LogOut, KeyRound, X } from "lucide-react"
+import { Radio, Diamond, Flower2, BarChart3, Megaphone, LogOut, KeyRound, X } from "lucide-react"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { useAuth } from "@/components/auth-provider"
 import { cn } from "@/lib/utils"
@@ -15,7 +15,6 @@ export const NAV = [
   { href: "/lamix", label: "Lamix Panel", icon: Diamond },
   { href: "/purple", label: "Purple Panel", icon: Flower2 },
   { href: "/announcements", label: "Announcements", icon: Megaphone },
-  { href: "/endpoints", label: "Endpoints", icon: SatelliteDish },
 ]
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {

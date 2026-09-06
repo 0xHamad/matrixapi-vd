@@ -175,22 +175,22 @@ export function Announcements() {
                   {/* CLI Title & Badges */}
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-xl font-bold tracking-tight text-white truncate">
+                      <h3 className="text-xl font-bold tracking-tight text-app-strong truncate">
                         {s.cli || "Unknown CLI"}
                       </h3>
                       {s.is_new_cli && (
-                        <span className="shrink-0 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/20">
+                        <span className="shrink-0 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-500 border border-amber-500/20">
                           NEW
                         </span>
                       )}
                     </div>
                     <div className="mt-2 flex items-center gap-3 text-sm font-medium text-app-muted">
-                      <div className="flex items-center gap-1.5 rounded-md bg-black/20 px-2 py-1 border border-white/5">
+                      <div className="flex items-center gap-1.5 rounded-md px-2 py-1 border" style={{ background: "var(--app-bg)", borderColor: "var(--app-border)" }}>
                         <span>🌍</span>
                         <span>{s.country || "Unknown"}</span>
                       </div>
                       {s.number && (
-                        <div className="flex items-center gap-1.5 rounded-md bg-black/20 px-2 py-1 border border-white/5 font-mono text-xs">
+                        <div className="flex items-center gap-1.5 rounded-md px-2 py-1 border font-mono text-xs" style={{ background: "var(--app-bg)", borderColor: "var(--app-border)" }}>
                           <span>📱</span>
                           <span>{s.number}</span>
                         </div>
@@ -199,12 +199,12 @@ export function Announcements() {
                   </div>
 
                   {/* Message Content */}
-                  <div className="mt-2 relative rounded-xl bg-[#030712] p-4 border border-white/5 shadow-inner group/copy">
+                  <div className="mt-2 relative rounded-xl p-4 border shadow-inner group/copy" style={{ background: "var(--app-bg)", borderColor: "var(--app-border)" }}>
                     <div className="absolute left-0 top-0 h-full w-1 rounded-l-xl" style={{ background: accent }} />
                     <div className="absolute top-2 right-2 opacity-0 group-hover/copy:opacity-100 transition-opacity">
                       <CopyButton text={s.content || s.raw_text || ""} label="Copy SMS" />
                     </div>
-                    <p className="whitespace-pre-wrap text-sm text-gray-300 font-mono leading-relaxed line-clamp-4 group-hover:line-clamp-none transition-all pr-6">
+                    <p className="whitespace-pre-wrap text-sm text-app-strong font-mono leading-relaxed line-clamp-4 group-hover:line-clamp-none transition-all pr-6">
                       {(s.content || s.raw_text || "")
                         .split('\n')
                         .filter(line => {
