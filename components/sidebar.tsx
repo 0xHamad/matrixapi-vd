@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion"
 
 export const NAV = [
   { href: "/", label: "Live Feed", icon: Radio },
-  { href: "/active-clis", label: "Active CLIs", icon: BarChart3 },
+  { href: "/clis", label: "Active CLIs", icon: BarChart3 },
   { href: "/lamix", label: "Lamix Panel", icon: Diamond },
   { href: "/purple", label: "Purple Panel", icon: Flower2 },
   { href: "/announcements", label: "Announcements", icon: Megaphone },

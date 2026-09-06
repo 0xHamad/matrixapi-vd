@@ -76,7 +76,7 @@ export async function POST(req: Request) {
       const res = NextResponse.json({ success: true, username })
       res.cookies.set("matrix_session", sid, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: false, // Fix: Must be false for HTTP IP addresses, otherwise browser rejects it
         sameSite: "lax",
         path: "/",
         maxAge: 7 * 24 * 3600 // 7 days
